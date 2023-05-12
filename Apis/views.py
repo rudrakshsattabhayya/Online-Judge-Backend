@@ -10,10 +10,12 @@ from rest_framework.response import Response
 from google.auth import crypt
 from google.auth import jwt as gjwt
 from uuid import uuid4
+from pathlib import Path
+import subprocess
+import shlex
+from django.core.files.base import ContentFile
 
 load_dotenv()
-
-#Submit problem view should be able to change the code file name and save it to some sensible name
 
 def authenticate(recievedJWT):
     decodedJWT = jwt.decode(recievedJWT, os.getenv('SECRET_KEY'), algorithms=['HS256'])
@@ -24,6 +26,47 @@ def authenticate(recievedJWT):
         return {"user": user, "status": status.HTTP_200_OK}
     else:
         return {"status": status.HTTP_404_NOT_FOUND}
+
+def compareFiles(p1, p2):
+    f1 = open(p1, "r")  
+    f2 = open(p2, "r")  
+  
+    i = 0
+    verdict = True
+
+    file1 = f1.read().split("\n")
+    file2 = f2.read().split("\n")
+    lines1 = len(file1)
+    lines2 = len(file2)
+    lines = min(lines1, lines2) 
+    
+    while i<lines:
+        l1 = file1[i]
+        l2 = file2[i]
+        if l1 != l2:
+            verdict = False
+            break
+        i+=1  
+            
+        
+    # closing files
+    f1.close()                                       
+    f2.close()
+    
+    return verdict
+
+def RunTheCodeAndGetTheOutPut(code, inputs):
+    compileCommand = f'g++ "{code.path}" -o output'
+    subprocess.run(compileCommand, shell=True)
+    subprocess.run(shlex.split(compileCommand))
+
+    # Run the compiled code with the test case file
+    run_command = f'./output < "{inputs.path}"'
+    output = subprocess.run(shlex.split(run_command), capture_output=True, text=True)
+
+    # Retrieve the output file from the subprocess
+    outputFile = output.stdout
+    return outputFile
 
 class LoginView(APIView):
     def post(self, request):
@@ -106,6 +149,19 @@ class CreateProblemView(APIView):
         newProblem.save()
         return Response({"QuestionId": newProblem.id, "status": status.HTTP_200_OK})
 
+class GetLeaderBoardView(APIView):
+    def get(self, request):
+        recievedJWT = request.data['jwtToken']
+        response = authenticate(recievedJWT=recievedJWT)
+
+        if response['status'] == status.HTTP_404_NOT_FOUND:
+            return Response({"message" : "User is Invalid!", "status": status.HTTP_404_NOT_FOUND})
+
+        users = UserModel.objects.all()
+        ser_data = GetLeaderBoardViewSerializer(users, many=True)
+
+        return Response({"response": ser_data.data, "status": status.HTTP_200_OK})
+
 class ListProblemsView(APIView):
     def get(self, request):
         recievedJWT = request.data['jwtToken']
@@ -162,15 +218,44 @@ class ShowProblemView(APIView):
         ser_data = ShowProblemViewSerializer(problem)
         return Response({"response": ser_data.data, "status": status.HTTP_200_OK})
 
-class GetLeaderBoardView(APIView):
-    def get(self, request):
+class SubmitProblemView(APIView):
+    def post(self, request):
         recievedJWT = request.data['jwtToken']
         response = authenticate(recievedJWT=recievedJWT)
 
         if response['status'] == status.HTTP_404_NOT_FOUND:
             return Response({"message" : "User is Invalid!", "status": status.HTTP_404_NOT_FOUND})
 
-        users = UserModel.objects.all()
-        ser_data = GetLeaderBoardViewSerializer(users, many=True)
+        submissionFile = request.FILES["code"]
+        questionId = request.data["questionId"]
+        user = response['user']
+        problem = ProblemModel.objects.filter(id=questionId).first()
 
-        return Response({"response": ser_data.data, "status": status.HTTP_200_OK})
+        if not problem:
+            return Response({"message" : "Problem ID is Invalid!", "status": status.HTTP_404_NOT_FOUND})
+
+        submissionObj = SubmissionModel(code=submissionFile, user = user, problem = problem)
+        submissionObj.save()
+
+        inputs = problem.hiddenTestCases
+        correctOutputs = problem.correctOutput
+
+        outputFile = RunTheCodeAndGetTheOutPut(submissionObj.code, inputs)
+        submissionObj.outputs.save('output.txt', ContentFile(outputFile))
+        submissionObj.save()
+
+        verdict = compareFiles(correctOutputs.path, submissionObj.outputs.path)
+        submissionObj.verdict = verdict
+        submissionObj.save()
+
+        problem.totalSubmissions += 1
+        user.totalSubmissions += 1
+
+        if verdict:
+            problem.acceptedSubmissions += 1
+            user.acceptedSubmissions += 1
+        
+        user.save()
+        problem.save()
+
+        return Response({"verdict": "verdict", "message" : "Successfull submission!", "status": status.HTTP_200_OK})

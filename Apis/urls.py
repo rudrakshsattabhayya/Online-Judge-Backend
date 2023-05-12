@@ -10,4 +10,5 @@ urlpatterns = [
     path('list-tags', ListTagsView.as_view()),
     path('show-problem', ShowProblemView.as_view()),
     path('get-leaderboard', GetLeaderBoardView.as_view()),
+    path('submit-problem', SubmitProblemView.as_view()),
 ]

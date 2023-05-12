@@ -15,7 +15,7 @@ class ListProblemViewSerializer(serializers.ModelSerializer):
 class ListSubmissionsViewSerializer(serializers.ModelSerializer):
     class Meta:
         model = SubmissionModel
-        fields = '__all__'
+        exclude = ('outputs',)
 
 class TagModelSerializer(serializers.ModelSerializer):
     class Meta:
