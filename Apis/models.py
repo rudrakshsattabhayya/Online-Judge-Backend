@@ -6,6 +6,7 @@ class UserModel(models.Model):
     name = models.CharField(max_length=50, default="name")
     username = models.CharField(max_length=20, default="username")
     profilePic = models.URLField(max_length=500, default="http://www.example.com")
+    isAdmin = models.BooleanField(default=False)
     token = models.CharField(max_length=1000, default="")
     leaderBoardScore = models.IntegerField(default=0)
     totalSubmissions = models.IntegerField(default=0)
@@ -25,16 +26,16 @@ class ProblemModel(models.Model):
     title = models.CharField(max_length=30)
     problemStatement = models.FileField(upload_to="problemStatements")
     visibleTestCases = models.CharField(max_length = 1000, null = True)
-    HiddenTestCases = models.FileField(upload_to="testCases")
+    hiddenTestCases = models.FileField(upload_to="testCases")
     correctSolution = models.FileField(upload_to="solutions")
     correctOutput = models.FileField(upload_to="correctOutputs")
     difficulty = models.IntegerField(default=1)
     acceptedSubmissions = models.IntegerField(default=0)
     totalSubmissions = models.IntegerField(default=0)
-    tags = models.ManyToManyField(TagModel, related_name="problems", default="default")
+    tags = models.ManyToManyField(TagModel, related_name="problems", default="default", null=True)
 
     def __str__(self):
-        return self.prob_name
+        return self.title
 
 class SubmissionModel(models.Model):
     code = models.FileField(upload_to="submissions")
@@ -45,3 +46,4 @@ class SubmissionModel(models.Model):
 
     def __str__(self):
         return self.user.name + " (" + self.problem.title + ")"
+    
