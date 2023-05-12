@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from rest_framework.views import APIView
 from .models import *
+from .serializers import *
 import jwt
 import os
 from rest_framework import status
@@ -18,15 +19,12 @@ def authenticate(recievedJWT):
     token = decodedJWT['token']
     user = UserModel.objects.filter(token=token).first()
     if user:
-        return {"username": user.username, "profile": user.picture, "status": status.HTTP_200_OK}
+        return {"user": user, "status": status.HTTP_200_OK}
     else:
         return {"status": status.HTTP_404_NOT_FOUND}
 
 class LoginView(APIView):
     def post(self, request):
-        # recievedJWT = request.data['jwtToken']
-        # authenticate(recievedJWT=recievedJWT)
-
         recievedJWT = request.data['jwtToken']
         googleObj = gjwt.decode(recievedJWT, verify=False)
 
@@ -51,5 +49,20 @@ class LoginView(APIView):
         jwtToken = jwt.encode(payload, os.getenv('SECRET_KEY'), algorithm='HS256')
 
         return Response({"jwtToken": jwtToken, "name": user.name, "email": user.email, "profilePic": user.profilePic, "status": status.HTTP_200_OK})
+
+class ChangeUserNameView(APIView):
+    def post(self, request):
+        recievedJWT = request.data['jwtToken']
+        response = authenticate(recievedJWT=recievedJWT)
+        if response['status'] == status.HTTP_404_NOT_FOUND:
+            return Response({"message" : "User is Invalid!", "status": status.HTTP_404_NOT_FOUND})
+        
+        newUserName = request.data["newUserName"]
+        user = UserModel.objects.filter(email=response['user'].email).first()
+        user.username = newUserName
+        user.save()
+
+        ser_data = UserModelSerializers(user)
+        return Response({"userDetails": ser_data.data, "status": status.HTTP_200_OK})
     
 
