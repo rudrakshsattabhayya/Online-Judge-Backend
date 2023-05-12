@@ -17,7 +17,14 @@ class ListSubmissionsViewSerializer(serializers.ModelSerializer):
         model = SubmissionModel
         fields = '__all__'
 
-class TagModelSerializers(serializers.ModelSerializer):
+class TagModelSerializer(serializers.ModelSerializer):
     class Meta:
         model = TagModel
+        fields = '__all__'
+
+class ShowProblemViewSerializer(serializers.ModelSerializer):
+    id = serializers.ReadOnlyField()
+    tags = TagModelSerializer(many=True)
+    class Meta:
+        model = ProblemModel
         fields = '__all__'

@@ -8,4 +8,5 @@ urlpatterns = [
     path('list-problems', ListProblemsView.as_view()),
     path('list-submissions', ListSubmissionsView.as_view()),
     path('list-tags', ListTagsView.as_view()),
+    path('show-problem', ShowProblemView.as_view()),
 ]

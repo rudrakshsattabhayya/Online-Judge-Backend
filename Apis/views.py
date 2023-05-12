@@ -13,6 +13,8 @@ from uuid import uuid4
 
 load_dotenv()
 
+#Submit problem view should be able to change the code file name and save it to some sensible name
+
 def authenticate(recievedJWT):
     decodedJWT = jwt.decode(recievedJWT, os.getenv('SECRET_KEY'), algorithms=['HS256'])
     userId = decodedJWT['userId']
@@ -140,5 +142,22 @@ class ListTagsView(APIView):
             return Response({"message" : "User is Invalid!", "status": status.HTTP_404_NOT_FOUND})
 
         availableTags = TagModel.objects.all()
-        ser_data = TagModelSerializers(availableTags, many=True)
+        ser_data = TagModelSerializer(availableTags, many=True)
         return Response({"tags": ser_data.data})
+    
+class ShowProblemView(APIView):
+    def get(self, request):
+        recievedJWT = request.data['jwtToken']
+        response = authenticate(recievedJWT=recievedJWT)
+
+        if response['status'] == status.HTTP_404_NOT_FOUND:
+            return Response({"message" : "User is Invalid!", "status": status.HTTP_404_NOT_FOUND})
+
+        questionId = request.data["questionId"]
+        problem = ProblemModel.objects.filter(id=questionId).first()
+
+        if(not problem):
+            return Response({"status": status.HTTP_404_NOT_FOUND})
+
+        ser_data = ShowProblemViewSerializer(problem)
+        return Response({"response": ser_data.data})
