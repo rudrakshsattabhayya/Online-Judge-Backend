@@ -62,7 +62,7 @@ class ChangeUserNameView(APIView):
         user.username = newUserName
         user.save()
 
-        ser_data = UserModelSerializers(user)
+        ser_data = UserModelSerializer(user)
         return Response({"userDetails": ser_data.data, "status": status.HTTP_200_OK})
 
 class CreateProblemView(APIView): 
@@ -103,3 +103,42 @@ class CreateProblemView(APIView):
 
         newProblem.save()
         return Response({"QuestionId": newProblem.id, "status": status.HTTP_200_OK})
+
+class ListProblemsView(APIView):
+    def get(self, request):
+        recievedJWT = request.data['jwtToken']
+        response = authenticate(recievedJWT=recievedJWT)
+
+        if response['status'] == status.HTTP_404_NOT_FOUND:
+            return Response({"message" : "User is Invalid!", "status": status.HTTP_404_NOT_FOUND})
+
+        problems = ProblemModel.objects.all()
+        ser_data = ListProblemViewSerializer(problems, many=True)
+        return Response({"problems": ser_data.data, "status": status.HTTP_200_OK})
+    
+class ListSubmissionsView(APIView):
+    def get(self, request):
+        recievedJWT = request.data['jwtToken']
+        response = authenticate(recievedJWT=recievedJWT)
+
+        if response['status'] == status.HTTP_404_NOT_FOUND:
+            return Response({"message" : "User is Invalid!", "status": status.HTTP_404_NOT_FOUND})
+
+        user = response['user']
+
+        submissions = SubmissionModel.objects.filter(user__email = user.email).all()
+        ser_data = ListSubmissionsViewSerializer(submissions, many=True)
+
+        return Response({"data": ser_data.data, "status": status.HTTP_200_OK})
+    
+class ListTagsView(APIView):
+    def get(self, request):
+        recievedJWT = request.data['jwtToken']
+        response = authenticate(recievedJWT=recievedJWT)
+
+        if response['status'] == status.HTTP_404_NOT_FOUND:
+            return Response({"message" : "User is Invalid!", "status": status.HTTP_404_NOT_FOUND})
+
+        availableTags = TagModel.objects.all()
+        ser_data = TagModelSerializers(availableTags, many=True)
+        return Response({"tags": ser_data.data})
