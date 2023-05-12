@@ -143,7 +143,7 @@ class ListTagsView(APIView):
 
         availableTags = TagModel.objects.all()
         ser_data = TagModelSerializer(availableTags, many=True)
-        return Response({"tags": ser_data.data})
+        return Response({"tags": ser_data.data, "status": status.HTTP_200_OK})
     
 class ShowProblemView(APIView):
     def get(self, request):
@@ -160,4 +160,17 @@ class ShowProblemView(APIView):
             return Response({"status": status.HTTP_404_NOT_FOUND})
 
         ser_data = ShowProblemViewSerializer(problem)
-        return Response({"response": ser_data.data})
+        return Response({"response": ser_data.data, "status": status.HTTP_200_OK})
+
+class GetLeaderBoardView(APIView):
+    def get(self, request):
+        recievedJWT = request.data['jwtToken']
+        response = authenticate(recievedJWT=recievedJWT)
+
+        if response['status'] == status.HTTP_404_NOT_FOUND:
+            return Response({"message" : "User is Invalid!", "status": status.HTTP_404_NOT_FOUND})
+
+        users = UserModel.objects.all()
+        ser_data = GetLeaderBoardViewSerializer(users, many=True)
+
+        return Response({"response": ser_data.data, "status": status.HTTP_200_OK})

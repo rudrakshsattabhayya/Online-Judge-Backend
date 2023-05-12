@@ -9,4 +9,5 @@ urlpatterns = [
     path('list-submissions', ListSubmissionsView.as_view()),
     path('list-tags', ListTagsView.as_view()),
     path('show-problem', ShowProblemView.as_view()),
+    path('get-leaderboard', GetLeaderBoardView.as_view()),
 ]

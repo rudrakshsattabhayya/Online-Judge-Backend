@@ -28,3 +28,8 @@ class ShowProblemViewSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProblemModel
         fields = '__all__'
+
+class GetLeaderBoardViewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserModel
+        fields = ('username', 'leaderBoardScore', 'id')
