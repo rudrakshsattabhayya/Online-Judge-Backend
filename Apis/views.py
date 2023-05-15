@@ -10,11 +10,11 @@ from rest_framework.response import Response
 from google.auth import crypt
 from google.auth import jwt as gjwt
 from uuid import uuid4
+import docker
+import tarfile
 from pathlib import Path
-import subprocess
-import shlex
-from django.core.files.base import ContentFile
 
+BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv()
 
 def authenticate(recievedJWT):
@@ -55,18 +55,50 @@ def compareFiles(p1, p2):
     
     return verdict
 
-def RunTheCodeAndGetTheOutPut(code, inputs):
-    compileCommand = f'g++ "{code.path}" -o output'
-    subprocess.run(compileCommand, shell=True)
-    subprocess.run(shlex.split(compileCommand))
+def create_container():
+    # Docker client initialization
+    client = docker.from_env()
 
-    # Run the compiled code with the test case file
-    run_command = f'./output < "{inputs.path}"'
-    output = subprocess.run(shlex.split(run_command), capture_output=True, text=True)
+    # Pull the gcc image
+    client.images.pull('gcc')
 
-    # Retrieve the output file from the subprocess
-    outputFile = output.stdout
-    return outputFile
+    # Create a new container
+    container = client.containers.create(
+        'gcc',  # Image name
+        'tail -f /dev/null',  # Command to keep the container running
+        detach=True,  # Run container in the background
+    )
+
+    # Start the container
+    container.start()
+
+    return container
+
+def copy_file(container, file):
+    os.chdir(os.path.dirname(file))
+    srcname = os.path.basename(file)
+    tar = tarfile.open(file + '.tar', mode='w')
+    try:
+        tar.add(srcname)
+    finally:
+        tar.close()
+
+    data = open(file + '.tar', 'rb').read()
+    container.put_archive("/", data)
+    os.remove(file+'.tar')
+
+def execute_cpp(container, code_file, input_file, output_file):
+    # Compile and run the C++ code
+    cmd_compile = f"g++ {code_file} -o /output"
+    cmd_run = f"/output < {input_file} > /output.txt"
+    exec_cmd = f"bash -c '{cmd_compile} && {cmd_run}'"
+    exec_code, output = container.exec_run(exec_cmd)
+
+    output_data = container.exec_run("cat /output.txt")
+    output_string = output_data.output.decode().strip()
+
+    with open(output_file, 'w') as dest_file:
+        dest_file.write(output_string)
 
 class LoginView(APIView):
     def post(self, request):
@@ -240,13 +272,27 @@ class SubmitProblemView(APIView):
         inputs = problem.hiddenTestCases
         correctOutputs = problem.correctOutput
 
-        outputFile = RunTheCodeAndGetTheOutPut(submissionObj.code, inputs)
-        submissionObj.outputs.save('output.txt', ContentFile(outputFile))
+        submissionObj.outputs = request.FILES["emptyOutputs"]
         submissionObj.save()
 
-        verdict = compareFiles(correctOutputs.path, submissionObj.outputs.path)
-        submissionObj.verdict = verdict
-        submissionObj.save()
+        code_path = submissionObj.code.path
+        inputs_path = inputs.path
+        outputs_path = submissionObj.outputs.path
+
+        container = create_container()
+
+        # Copy the code file to the container
+        copy_file(container, code_path)
+        copy_file(container, inputs_path)
+
+        # Execute the code and capture the output
+        execute_cpp(container, f'/{submissionObj.code.name.split("/")[1]}', f'/{inputs.name.split("/")[1]}', outputs_path)
+
+        # Cleanup - stop and remove the container
+        container.stop()
+        container.remove()
+
+        verdict = compareFiles(submissionObj.outputs.path, correctOutputs.path)
 
         problem.totalSubmissions += 1
         user.totalSubmissions += 1
@@ -258,4 +304,4 @@ class SubmitProblemView(APIView):
         user.save()
         problem.save()
 
-        return Response({"verdict": "verdict", "message" : "Successfull submission!", "status": status.HTTP_200_OK})
+        return Response({"verdict": verdict, "message": "Successful submission!", "status": status.HTTP_200_OK})

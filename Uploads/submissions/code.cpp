@@ -2,7 +2,7 @@
 using namespace std;
 
 int main(){
-    int x;
-    cin>>x;
-    cout<<x<<endl;
+    int x,y,z;
+    cin>>x>>y>>z;
+    cout<<x<<endl<<y<<endl<<z<<endl;
 }

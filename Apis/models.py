@@ -44,6 +44,7 @@ class SubmissionModel(models.Model):
     user = models.ForeignKey(UserModel, related_name="submissions", on_delete=models.CASCADE)
     problem = models.ForeignKey(ProblemModel, related_name="submissions", on_delete=models.CASCADE)
     outputs = models.FileField(upload_to="submissions", null=True)
+    testCases = models.FileField(upload_to="submission/hiddenTestcases", null=True)
 
     def __str__(self):
         return self.user.name + " (" + self.problem.title + ")"
