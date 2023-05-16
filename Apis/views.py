@@ -305,3 +305,29 @@ class SubmitProblemView(APIView):
         problem.save()
 
         return Response({"verdict": verdict, "message": "Successful submission!", "status": status.HTTP_200_OK})
+    
+class DeleteSubmissionsView(APIView):
+    def post(self, request):
+        recievedJWT = request.data['jwtToken']
+        response = authenticate(recievedJWT=recievedJWT)
+
+        if response['status'] == status.HTTP_404_NOT_FOUND or response['user'].isAdmin == False:
+            return Response({"message" : "User is Invalid!", "status": status.HTTP_404_NOT_FOUND})
+        
+        submissionsToBeDeleted = request.data['submissionsToBeDeleted']
+
+        for submissionId in submissionsToBeDeleted:
+            submissionsList = SubmissionModel.objects.filter(id=submissionId)
+            if not submissionsList.first():
+                pass
+
+            submission = submissionsList.first()
+            codePath = submission.code.path
+            outputsPath = submission.outputs.path
+
+            os.remove(codePath)
+            os.remove(outputsPath)
+
+            submission.delete()
+        
+        return Response({"message":"Selected submissions are deleted!", "status": status.HTTP_200_OK})

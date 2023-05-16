@@ -11,4 +11,5 @@ urlpatterns = [
     path('show-problem', ShowProblemView.as_view()),
     path('get-leaderboard', GetLeaderBoardView.as_view()),
     path('submit-problem', SubmitProblemView.as_view()),
+    path('delete-submissions', DeleteSubmissionsView.as_view()),
 ]
