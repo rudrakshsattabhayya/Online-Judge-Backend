@@ -13,6 +13,7 @@ from uuid import uuid4
 import docker
 import tarfile
 from pathlib import Path
+from django.core.files import File
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv()
@@ -269,11 +270,18 @@ class SubmitProblemView(APIView):
         submissionObj = SubmissionModel(code=submissionFile, user = user, problem = problem)
         submissionObj.save()
 
+        emptyFilePath = f"{BASE_DIR}/Uploads/emptyFile.txt"
+        print(emptyFilePath)
+        with open(emptyFilePath, 'w') as file:
+            pass
+
+        with open(emptyFilePath, 'rb') as file_obj:
+            submissionObj.outputs.save("new_file.txt", File(file_obj))
+
+        submissionObj.save()
+
         inputs = problem.hiddenTestCases
         correctOutputs = problem.correctOutput
-
-        submissionObj.outputs = request.FILES["emptyOutputs"]
-        submissionObj.save()
 
         code_path = submissionObj.code.path
         inputs_path = inputs.path
