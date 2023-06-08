@@ -20,13 +20,12 @@ load_dotenv()
 
 def authenticate(recievedJWT):
     decodedJWT = jwt.decode(recievedJWT, os.getenv('SECRET_KEY'), algorithms=['HS256'])
-    userId = decodedJWT['userId']
     token = decodedJWT['token']
     user = UserModel.objects.filter(token=token).first()
     if user:
         return {"user": user, "status": status.HTTP_200_OK}
     else:
-        return {"status": status.HTTP_404_NOT_FOUND}
+        return {"message": "User is Invalid!" ,"status": status.HTTP_404_NOT_FOUND}
 
 def compareFiles(p1, p2):
     f1 = open(p1, "r")  
@@ -101,13 +100,33 @@ def execute_cpp(container, code_file, input_file, output_file):
     with open(output_file, 'w') as dest_file:
         dest_file.write(output_string)
 
+class AuthenticateRoute(APIView):
+    def post(self, request):
+        recievedToken = request.data['token']
+        if not recievedToken:
+            return Response({"message": "Token not found!", "status": status.HTTP_404_NOT_FOUND})
+        
+        res = authenticate(recievedToken)
+
+        if res["status"] == status.HTTP_404_NOT_FOUND:
+            return Response(res)
+        
+        obj = {
+            "status": res["status"],
+            "name": res["user"].name,
+            "email": res["user"].email,
+            "profilePic": res["user"].profilePic
+        }
+        return Response(obj)
+
 class LoginView(APIView):
     def post(self, request):
         recievedJWT = request.data['jwtToken']
-        googleObj = gjwt.decode(recievedJWT, verify=False)
-
-        if not googleObj:
-            return Response("Invalid JWT!", status.HTTP_404_NOT_FOUND)
+        googleObj = None
+        try:
+            googleObj = gjwt.decode(recievedJWT, verify=False)
+        except:
+            return Response({"message":"Invalid JWT!", "status": status.HTTP_404_NOT_FOUND})
         
         userToken = str(uuid4())
         found = UserModel.objects.filter(email=googleObj['email']).first()
@@ -121,8 +140,7 @@ class LoginView(APIView):
         user.save()
 
         payload = {
-                    "token": userToken,
-                    "userId" : user.id
+                    "token": userToken
                   }
         jwtToken = jwt.encode(payload, os.getenv('SECRET_KEY'), algorithm='HS256')
 
@@ -184,31 +202,28 @@ class CreateProblemView(APIView):
 
 class GetLeaderBoardView(APIView):
     def get(self, request):
-        recievedJWT = request.data['jwtToken']
-        response = authenticate(recievedJWT=recievedJWT)
+        try:
+            users = UserModel.objects.all()
+            ser_data = GetLeaderBoardViewSerializer(users, many=True)
 
-        if response['status'] == status.HTTP_404_NOT_FOUND:
-            return Response({"message" : "User is Invalid!", "status": status.HTTP_404_NOT_FOUND})
-
-        users = UserModel.objects.all()
-        ser_data = GetLeaderBoardViewSerializer(users, many=True)
-
-        return Response({"response": ser_data.data, "status": status.HTTP_200_OK})
+            return Response({"response": ser_data.data, "status": status.HTTP_200_OK})
+        
+        except:
+            return Response({"message": "Unable to get the leaderboard!", "status": status.HTTP_400_BAD_REQUEST})
 
 class ListProblemsView(APIView):
     def get(self, request):
-        recievedJWT = request.data['jwtToken']
-        response = authenticate(recievedJWT=recievedJWT)
-
-        if response['status'] == status.HTTP_404_NOT_FOUND:
-            return Response({"message" : "User is Invalid!", "status": status.HTTP_404_NOT_FOUND})
-
-        problems = ProblemModel.objects.all()
-        ser_data = ListProblemViewSerializer(problems, many=True)
-        return Response({"problems": ser_data.data, "status": status.HTTP_200_OK})
+        try:
+            problems = ProblemModel.objects.all()
+            ser_data = ListProblemViewSerializer(problems, many=True)
+            
+            return Response({"problems": ser_data.data, "status": status.HTTP_200_OK})
+        
+        except:
+            return Response({"message": "Unable to get the Problems!", "status": status.HTTP_400_BAD_REQUEST})
     
 class ListSubmissionsView(APIView):
-    def get(self, request):
+    def post(self, request):
         recievedJWT = request.data['jwtToken']
         response = authenticate(recievedJWT=recievedJWT)
 
@@ -220,19 +235,16 @@ class ListSubmissionsView(APIView):
         submissions = SubmissionModel.objects.filter(user__email = user.email).all()
         ser_data = ListSubmissionsViewSerializer(submissions, many=True)
 
-        return Response({"data": ser_data.data, "status": status.HTTP_200_OK})
+        return Response({"submissions": ser_data.data, "status": status.HTTP_200_OK})
     
 class ListTagsView(APIView):
     def get(self, request):
-        recievedJWT = request.data['jwtToken']
-        response = authenticate(recievedJWT=recievedJWT)
-
-        if response['status'] == status.HTTP_404_NOT_FOUND:
-            return Response({"message" : "User is Invalid!", "status": status.HTTP_404_NOT_FOUND})
-
-        availableTags = TagModel.objects.all()
-        ser_data = TagModelSerializer(availableTags, many=True)
-        return Response({"tags": ser_data.data, "status": status.HTTP_200_OK})
+        try:
+            availableTags = TagModel.objects.all()
+            ser_data = TagModelSerializer(availableTags, many=True)
+            return Response({"tags": ser_data.data, "status": status.HTTP_200_OK})
+        except:
+            return Response({"message": "Unable to get the Filter Tags!", "status": status.HTTP_400_BAD_REQUEST})
     
 class ShowProblemView(APIView):
     def get(self, request):
