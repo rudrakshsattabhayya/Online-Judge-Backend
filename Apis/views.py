@@ -130,20 +130,42 @@ class AuthenticateRoute(APIView):
     def post(self, request):
         recievedToken = request.data['token']
         if not recievedToken:
-            return Response({"message": "Token not found!", "status": status.HTTP_404_NOT_FOUND})
+            return Response({"message": "Token not found! Try to Re-Login.", "status": status.HTTP_404_NOT_FOUND})
         
         res = authenticate(recievedToken)
-
+        user = res['user']
         if res["status"] == status.HTTP_404_NOT_FOUND:
             return Response(res)
         
         obj = {
             "status": res["status"],
-            "name": res["user"].name,
-            "email": res["user"].email,
-            "profilePic": res["user"].profilePic
+            "name": user.name,
+            "email": user.email,
+            "profilePic": user.profilePic
         }
         return Response(obj)
+
+class AuthenticateRouteForAdmin(APIView):
+    def post(self, request):
+        recievedToken = request.data['token']
+        if not recievedToken:
+            return Response({"message": "Token not found! Try to Re-Login.", "status": status.HTTP_404_NOT_FOUND})
+        
+        res = authenticate(recievedToken)
+        user = res['user']
+        if res["status"] == status.HTTP_404_NOT_FOUND:
+            return Response(res)
+        
+        if user.isAdmin:
+            obj = {
+            "status": res["status"],
+            "name": user.name,
+            "email": user.email,
+            "profilePic": user.profilePic
+            }
+            return Response(obj)
+        else:
+            return Response({"message": "This Page can only be accessed by the Admin!", "status": status.HTTP_403_FORBIDDEN})
 
 class LoginView(APIView):
     def post(self, request):

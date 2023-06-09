@@ -6,6 +6,7 @@ urlpatterns = [
     path('login-with-password', LoginWithPassword.as_view()),
     path('change-the-password', ChangeThePassword.as_view()),
     path('auth-route', AuthenticateRoute.as_view()),
+    path('auth-route-admin', AuthenticateRouteForAdmin.as_view()),
     path('change-username', ChangeUserNameView.as_view()),
     path('create-problem', CreateProblemView.as_view()),
     path('list-problems', ListProblemsView.as_view()),
