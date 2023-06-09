@@ -3,7 +3,7 @@ import uuid
 
 class UserModel(models.Model):
     email = models.EmailField(max_length=50, default="email@email.com")
-    hashedPassword = models.CharField(max_length=500, null=True)
+    hashedPassword = models.CharField(max_length=500, null=True, blank=True)
     name = models.CharField(max_length=50, default="name")
     username = models.CharField(max_length=20, default="username")
     profilePic = models.URLField(max_length=500, default="http://www.example.com")

@@ -53,33 +53,17 @@ def verify_password(password, hashed_password):
     
     return verifiedStatus
 
-def compareFiles(p1, p2):
-    f1 = open(p1, "r")  
-    f2 = open(p2, "r")  
-  
-    i = 0
-    verdict = True
+def compareFiles(file1_path, file2_path):
+    with open(file1_path, 'r') as file1:
+        content1 = file1.read()
 
-    file1 = f1.read().split("\n")
-    file2 = f2.read().split("\n")
-    lines1 = len(file1)
-    lines2 = len(file2)
-    lines = min(lines1, lines2) 
-    
-    while i<lines:
-        l1 = file1[i]
-        l2 = file2[i]
-        if l1 != l2:
-            verdict = False
-            break
-        i+=1  
-            
-        
-    # closing files
-    f1.close()                                       
-    f2.close()
-    
-    return verdict
+    with open(file2_path, 'r') as file2:
+        content2 = file2.read()
+
+    # Files are automatically closed at this point
+
+    return content1 == content2
+
 
 def create_container():
     # Docker client initialization
@@ -165,7 +149,7 @@ class AuthenticateRouteForAdmin(APIView):
             }
             return Response(obj)
         else:
-            return Response({"message": "This Page can only be accessed by the Admin!", "status": status.HTTP_403_FORBIDDEN})
+            return Response({"message": "Requested page can only be accessed by the Admin!", "status": status.HTTP_403_FORBIDDEN})
 
 class LoginView(APIView):
     def post(self, request):
@@ -407,7 +391,7 @@ class SubmitProblemView(APIView):
         submissionObj.save()
 
         emptyFilePath = f"{BASE_DIR}/Uploads/emptyFile.txt"
-        print(emptyFilePath)
+
         with open(emptyFilePath, 'w') as file:
             pass
 
@@ -444,15 +428,17 @@ class SubmitProblemView(APIView):
         if verdict:
             solutionViewed = ProblemIdModel.objects.filter(problemId=problem.id, user=user).first()
             if not solutionViewed:
-                proofOfSolved = ProblemIdModel(problemId=problem.id, user=user).first()
+                proofOfSolved = ProblemIdModel(problemId=problem.id, user=user)
                 proofOfSolved.save()
                 user.leaderBoardScore = user.leaderBoardScore + problem.difficulty
             
+            submissionObj.verdict = True
             problem.acceptedSubmissions += 1
             user.acceptedSubmissions += 1
         
         user.save()
         problem.save()
+        submissionObj.save()
 
         return Response({"verdict": verdict, "message": "Successful submission!", "status": status.HTTP_200_OK})
     
@@ -461,7 +447,7 @@ class DeleteSubmissionsView(APIView):
         recievedJWT = request.data['jwtToken']
         response = authenticate(recievedJWT=recievedJWT)
 
-        if response['status'] == status.HTTP_404_NOT_FOUND or response['user'].isAdmin == False:
+        if response['status'] != status.HTTP_200_OK or response['user'].isAdmin == False:
             return Response({"message" : "User is Invalid!", "status": status.HTTP_404_NOT_FOUND})
         
         submissionsToBeDeleted = request.data['submissionsToBeDeleted']
