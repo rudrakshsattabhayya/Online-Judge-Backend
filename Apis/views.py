@@ -24,7 +24,7 @@ def authenticate(recievedJWT):
     try:
         decodedJWT = jwt.decode(recievedJWT, os.getenv('SECRET_KEY'), algorithms=['HS256'])
     except:
-        return {"message": "Token is Invalid!", "status": status.HTTP_400_BAD_REQUEST}
+        return {"message": "Login Expired!", "status": status.HTTP_400_BAD_REQUEST}
     
     token = decodedJWT['token']
     user = UserModel.objects.filter(token=token).first()
@@ -45,7 +45,13 @@ def hash_password(password):
 
 def verify_password(password, hashed_password):
     # Verify the password
-    return bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8'))
+    verifiedStatus = False
+    try:
+        verifiedStatus = bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8'))
+    except:
+        return False
+    
+    return verifiedStatus
 
 def compareFiles(p1, p2):
     f1 = open(p1, "r")  
@@ -177,7 +183,7 @@ class LoginWithPassword(APIView):
             return Response({"message": "This email is not registered! Login with google to register yourself.", "status": status.HTTP_404_NOT_FOUND})
 
         if not user.hashedPassword:
-            return Response({"message": "Login with google to add your password!", "status": status.HTTP_400_BAD_REQUEST})
+            return Response({"message": "Login with google to add your password!", "status": status.HTTP_501_NOT_IMPLEMENTED})
         
         verified = verify_password(password, user.hashedPassword)
 
@@ -313,21 +319,51 @@ class ListTagsView(APIView):
             return Response({"message": "Unable to get the Filter Tags!", "status": status.HTTP_400_BAD_REQUEST})
     
 class ShowProblemView(APIView):
-    def get(self, request):
+    def post(self, request):
         recievedJWT = request.data['jwtToken']
         response = authenticate(recievedJWT=recievedJWT)
 
-        if response['status'] == status.HTTP_404_NOT_FOUND:
-            return Response({"message" : "User is Invalid!", "status": status.HTTP_404_NOT_FOUND})
+        if response['status'] != status.HTTP_200_OK:
+            return Response(response)
 
         questionId = request.data["questionId"]
-        problem = ProblemModel.objects.filter(id=questionId).first()
+        problem = None
+        try:
+            problem = ProblemModel.objects.filter(id=questionId).first()
+        except:
+            return Response({"message": "Problem ID is invalid!", "status": status.HTTP_404_NOT_FOUND})
 
         if(not problem):
-            return Response({"status": status.HTTP_404_NOT_FOUND})
+            return Response({"message": "Problem ID is invalid!", "status": status.HTTP_404_NOT_FOUND})
 
         ser_data = ShowProblemViewSerializer(problem)
         return Response({"response": ser_data.data, "status": status.HTTP_200_OK})
+
+class ShowProblemSolutionView(APIView):
+    def post(self, request):
+        recievedJWT = request.data['jwtToken']
+        response = authenticate(recievedJWT=recievedJWT)
+
+        if response['status'] != status.HTTP_200_OK:
+            return Response(response)
+        
+        user = response['user']
+        questionId = request.data["questionId"]
+        problem = None
+        try:
+            problem = ProblemModel.objects.filter(id=questionId).first()
+        except:
+            return Response({"message": "Problem ID is invalid!", "status": status.HTTP_404_NOT_FOUND})
+
+        if(not problem):
+            return Response({"message": "Problem ID is invalid!", "status": status.HTTP_404_NOT_FOUND})
+
+        problemIdModelObj = ProblemIdModel.objects.filter(problemId=problem.id, user=user).first()
+        if not problemIdModelObj:
+            problemIdModelObj = ProblemIdModel(problemId=problem.id, user=user)
+            problemIdModelObj.save()
+
+        return Response({"solution": problem.correctSolution, "status": status.HTTP_200_OK})
 
 class SubmitProblemView(APIView):
     def post(self, request):
@@ -384,6 +420,12 @@ class SubmitProblemView(APIView):
         user.totalSubmissions += 1
 
         if verdict:
+            solutionViewed = ProblemIdModel.objects.filter(problemId=problem.id, user=user).first()
+            if not solutionViewed:
+                proofOfSolved = ProblemIdModel(problemId=problem.id, user=user).first()
+                proofOfSolved.save()
+                user.leaderBoardScore = user.leaderBoardScore + problem.difficulty
+            
             problem.acceptedSubmissions += 1
             user.acceptedSubmissions += 1
         

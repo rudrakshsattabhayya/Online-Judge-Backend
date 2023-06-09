@@ -16,6 +16,10 @@ class UserModel(models.Model):
     def __str__(self):
         return self.email
 
+class ProblemIdModel(models.Model):
+    problemId = models.CharField(max_length=500)
+    user = models.ForeignKey(UserModel, related_name="viewedProblems", on_delete=models.CASCADE)
+
 class TagModel(models.Model):
     name = models.CharField(max_length=40, default="default")
 

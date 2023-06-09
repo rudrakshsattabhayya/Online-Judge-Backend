@@ -27,7 +27,7 @@ class ShowProblemViewSerializer(serializers.ModelSerializer):
     tags = TagModelSerializer(many=True)
     class Meta:
         model = ProblemModel
-        fields = '__all__'
+        exclude = ('hiddenTestCases', 'correctSolution', 'correctOutput')
 
 class GetLeaderBoardViewSerializer(serializers.ModelSerializer):
     class Meta:
