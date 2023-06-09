@@ -14,18 +14,38 @@ import docker
 import tarfile
 from pathlib import Path
 from django.core.files import File
+import bcrypt
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv()
 
 def authenticate(recievedJWT):
-    decodedJWT = jwt.decode(recievedJWT, os.getenv('SECRET_KEY'), algorithms=['HS256'])
+    decodedJWT=None
+    try:
+        decodedJWT = jwt.decode(recievedJWT, os.getenv('SECRET_KEY'), algorithms=['HS256'])
+    except:
+        return {"message": "Token is Invalid!", "status": status.HTTP_400_BAD_REQUEST}
+    
     token = decodedJWT['token']
     user = UserModel.objects.filter(token=token).first()
     if user:
         return {"user": user, "status": status.HTTP_200_OK}
     else:
-        return {"message": "User is Invalid!" ,"status": status.HTTP_404_NOT_FOUND}
+        return {"message": "User is Invalid!", "status": status.HTTP_404_NOT_FOUND}
+
+def hash_password(password):
+    # Generate a salt
+    salt = bcrypt.gensalt()
+
+    # Hash the password with the salt
+    hashed_password = bcrypt.hashpw(password.encode('utf-8'), salt)
+
+    # Return the hashed password as a string
+    return hashed_password.decode('utf-8')
+
+def verify_password(password, hashed_password):
+    # Verify the password
+    return bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8'))
 
 def compareFiles(p1, p2):
     f1 = open(p1, "r")  
@@ -145,6 +165,52 @@ class LoginView(APIView):
         jwtToken = jwt.encode(payload, os.getenv('SECRET_KEY'), algorithm='HS256')
 
         return Response({"jwtToken": jwtToken, "name": user.name, "email": user.email, "profilePic": user.profilePic, "status": status.HTTP_200_OK})
+
+class LoginWithPassword(APIView):
+    def post(self, request):
+        email = request.data["email"]
+        password = request.data["password"]
+        
+        user = UserModel.objects.filter(email=email).first()
+
+        if not user:
+            return Response({"message": "This email is not registered! Login with google to register yourself.", "status": status.HTTP_404_NOT_FOUND})
+
+        if not user.hashedPassword:
+            return Response({"message": "Login with google to add your password!", "status": status.HTTP_400_BAD_REQUEST})
+        
+        verified = verify_password(password, user.hashedPassword)
+
+        if verified:
+            userToken = str(uuid4())
+            user.token = userToken
+            user.save()
+
+            payload = {
+                    "token": userToken
+                    }
+            jwtToken = jwt.encode(payload, os.getenv('SECRET_KEY'), algorithm='HS256')
+            return Response({"jwtToken": jwtToken, "name": user.name, "email": user.email, "profilePic": user.profilePic, "status": status.HTTP_200_OK})
+        else:
+            return Response({"message": "Password is wrong!", "status": status.HTTP_400_BAD_REQUEST})
+
+class ChangeThePassword(APIView):
+    def post(self, request):
+        password = request.data["password"]
+        recievedJWT = request.data['jwtToken']
+
+        authentication = authenticate(recievedJWT=recievedJWT)
+        if authentication['status'] != status.HTTP_200_OK:
+            return Response(authentication)
+        
+        user = authentication["user"]
+        hashedPassword = hash_password(password)
+        user.hashedPassword = hashedPassword
+        user.save()
+
+        return Response({"message": "Password is changed!", "status": status.HTTP_200_OK})        
+        
+
 
 class ChangeUserNameView(APIView):
     def post(self, request):
