@@ -33,7 +33,7 @@ class ProblemModel(models.Model):
     visibleTestCases = models.CharField(max_length = 1000, null = True)
     hiddenTestCases = models.FileField(upload_to="testCases")
     correctSolution = models.FileField(upload_to="solutions")
-    correctOutput = models.FileField(upload_to="correctOutputs")
+    correctOutput = models.FileField(upload_to="correctOutputs", null = True)
     difficulty = models.IntegerField(default=1)
     acceptedSubmissions = models.IntegerField(default=0)
     totalSubmissions = models.IntegerField(default=0)
