@@ -15,6 +15,8 @@ import tarfile
 from pathlib import Path
 from django.core.files import File
 import bcrypt
+import requests
+import json
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv()
@@ -52,63 +54,6 @@ def verify_password(password, hashed_password):
         return False
     
     return verifiedStatus
-
-def compareFiles(file1_path, file2_path):
-    with open(file1_path, 'r') as file1:
-        content1 = file1.read()
-
-    with open(file2_path, 'r') as file2:
-        content2 = file2.read()
-
-    # Files are automatically closed at this point
-
-    return content1 == content2
-
-
-def create_container():
-    # Docker client initialization
-    client = docker.from_env()
-
-    # Pull the gcc image
-    client.images.pull('gcc')
-
-    # Create a new container
-    container = client.containers.create(
-        'gcc',  # Image name
-        'tail -f /dev/null',  # Command to keep the container running
-        detach=True,  # Run container in the background
-    )
-
-    # Start the container
-    container.start()
-
-    return container
-
-def copy_file(container, file):
-    os.chdir(os.path.dirname(file))
-    srcname = os.path.basename(file)
-    tar = tarfile.open(file + '.tar', mode='w')
-    try:
-        tar.add(srcname)
-    finally:
-        tar.close()
-
-    data = open(file + '.tar', 'rb').read()
-    container.put_archive("/", data)
-    os.remove(file+'.tar')
-
-def execute_cpp(container, code_file, input_file, output_file):
-    # Compile and run the C++ code
-    cmd_compile = f"g++ {code_file} -o /output"
-    cmd_run = f"/output < {input_file} > /output.txt"
-    exec_cmd = f"bash -c '{cmd_compile} && {cmd_run}'"
-    exec_code, output = container.exec_run(exec_cmd)
-
-    output_data = container.exec_run("cat /output.txt")
-    output_string = output_data.output.decode().strip()
-
-    with open(output_file, 'w') as dest_file:
-        dest_file.write(output_string)
 
 class AuthenticateRoute(APIView):
     def post(self, request):
@@ -269,22 +214,30 @@ class CreateProblemView(APIView):
             newProblem.correctOutput.save("correctOutputs.txt", File(file_obj))
 
         inputs = newProblem.hiddenTestCases
-        code_path = newProblem.correctSolution.path
-        inputs_path = newProblem.hiddenTestCases.path
+        code = newProblem.correctSolution
+        inputs = newProblem.hiddenTestCases
         outputs_path = newProblem.correctOutput.path
 
-        container = create_container()
+        files = {
+            "code": code,
+            "inputs": inputs,
+        }
+        obj = {
+            "password": os.getenv("DJANGO_PASSWORD"),
+        }
 
-        # Copy the code file to the container
-        copy_file(container, code_path)
-        copy_file(container, inputs_path)
+        respFromEval = requests.post(f"{os.getenv('DJANGO_EVALUATION_SERVER_URL')}/get-outputs", files=files, data=obj)
+        temp = None
+        for x in respFromEval:
+            temp = x
 
-        # Execute the code and capture the output
-        execute_cpp(container, f'/{newProblem.correctSolution.name.split("/")[1]}', f'/{inputs.name.split("/")[1]}', outputs_path)
+        temp2 = temp.decode('utf-8')
+        response_dict = json.loads(temp2)
 
-        # Cleanup - stop and remove the container
-        container.stop()
-        container.remove()
+        outputString = response_dict["outputs"]
+
+        with open(outputs_path, 'w') as file:
+            file.write(outputString)
 
         tagslist = data["tags"].split(", ")
         tagsQueryset = TagModel.objects.all()
@@ -415,37 +368,28 @@ class SubmitProblemView(APIView):
         submissionObj = SubmissionModel(code=submissionFile, user = user, problem = problem)
         submissionObj.save()
 
-        emptyFilePath = f"{BASE_DIR}/Uploads/emptyFile.txt"
-
-        with open(emptyFilePath, 'w') as file:
-            pass
-
-        with open(emptyFilePath, 'rb') as file_obj:
-            submissionObj.outputs.save("new_file.txt", File(file_obj))
-
-        submissionObj.save()
-
         inputs = problem.hiddenTestCases
         correctOutputs = problem.correctOutput
+        code = submissionObj.code
 
-        code_path = submissionObj.code.path
-        inputs_path = inputs.path
-        outputs_path = submissionObj.outputs.path
+        files = {
+            "code": code,
+            "inputs": inputs,
+            "correctOutputs": correctOutputs
+        }
+        data = {
+            "password": os.getenv("DJANGO_PASSWORD"),
+        }
 
-        container = create_container()
+        respFromEval = requests.post(f"{os.getenv('DJANGO_EVALUATION_SERVER_URL')}/get-verdict", files=files, data=data)
+        temp = None
+        for x in respFromEval:
+            temp = x
 
-        # Copy the code file to the container
-        copy_file(container, code_path)
-        copy_file(container, inputs_path)
+        temp2 = temp.decode('utf-8')
+        response_dict = json.loads(temp2)
+        verdict = response_dict["verdict"]
 
-        # Execute the code and capture the output
-        execute_cpp(container, f'/{submissionObj.code.name.split("/")[1]}', f'/{inputs.name.split("/")[1]}', outputs_path)
-
-        # Cleanup - stop and remove the container
-        container.stop()
-        container.remove()
-
-        verdict = compareFiles(submissionObj.outputs.path, correctOutputs.path)
 
         problem.totalSubmissions += 1
         user.totalSubmissions += 1
