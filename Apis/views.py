@@ -70,7 +70,8 @@ class AuthenticateRoute(APIView):
             "status": res["status"],
             "name": user.name,
             "email": user.email,
-            "profilePic": user.profilePic
+            "profilePic": user.profilePic,
+            "username": user.username
         }
         return Response(obj)
 
@@ -177,12 +178,17 @@ class ChangeUserNameView(APIView):
             return Response({"message" : "User is Invalid!", "status": status.HTTP_404_NOT_FOUND})
         
         newUserName = request.data["newUserName"]
+
+        check = UserModel.objects.filter(username=newUserName).first()
+        if check:
+            return Response({"message": "A User with this username already exists!", "status": status.HTTP_400_BAD_REQUEST})
+
         user = UserModel.objects.filter(email=response['user'].email).first()
         user.username = newUserName
         user.save()
 
         ser_data = UserModelSerializer(user)
-        return Response({"userDetails": ser_data.data, "status": status.HTTP_200_OK})
+        return Response({"username": ser_data.data["username"], "message": "Username successfully changed!", "status": status.HTTP_200_OK})
 
 class CreateProblemView(APIView): 
     def post(self, request):
@@ -283,9 +289,9 @@ class ListSubmissionsView(APIView):
         recievedJWT = request.data['jwtToken']
         response = authenticate(recievedJWT=recievedJWT)
 
-        if response['status'] == status.HTTP_404_NOT_FOUND:
-            return Response({"message" : "User is Invalid!", "status": status.HTTP_404_NOT_FOUND})
-
+        if response['status'] != status.HTTP_200_OK:
+            return Response(response)
+        
         user = response['user']
 
         submissions = SubmissionModel.objects.filter(user__email = user.email).all()

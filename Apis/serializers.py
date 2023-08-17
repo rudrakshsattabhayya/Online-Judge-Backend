@@ -8,14 +8,32 @@ class UserModelSerializer(serializers.ModelSerializer):
 
 class ListProblemViewSerializer(serializers.ModelSerializer):
     id = serializers.ReadOnlyField()
+    tags = serializers.SerializerMethodField()
     class Meta:
         model = ProblemModel
-        fields = ('id', 'title', 'difficulty', 'acceptedSubmissions', 'totalSubmissions')
+        fields = ('id', 'title', 'difficulty', 'acceptedSubmissions', 'totalSubmissions', 'tags')
+
+    def get_tags(self, obj):
+        tags = obj.tags.all()
+        tag_names = [tag.name for tag in tags]
+        return tag_names
 
 class ListSubmissionsViewSerializer(serializers.ModelSerializer):
+    user = serializers.SerializerMethodField()
+    problem = serializers.SerializerMethodField()
+
     class Meta:
         model = SubmissionModel
-        exclude = ('outputs',)
+        fields = '__all__'
+    
+    def get_user(self, obj):
+        return obj.user.username
+    
+    def get_problem(self, obj):
+        return {
+            'id': obj.problem.id,
+            'title': obj.problem.title
+        }
 
 class TagModelSerializer(serializers.ModelSerializer):
     class Meta:
