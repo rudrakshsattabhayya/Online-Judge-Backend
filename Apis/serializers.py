@@ -35,6 +35,11 @@ class ListSubmissionsViewSerializer(serializers.ModelSerializer):
             'title': obj.problem.title
         }
 
+class SubmissionsOfAProblemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SubmissionModel
+        fields = ('time', 'verdict', 'code')
+
 class TagModelSerializer(serializers.ModelSerializer):
     class Meta:
         model = TagModel

@@ -31,6 +31,7 @@ class ProblemModel(models.Model):
     title = models.CharField(max_length=30)
     problemStatement = models.FileField(upload_to="problemStatements")
     visibleTestCases = models.CharField(max_length = 1000, null = True)
+    visibleOutputs = models.CharField(max_length = 1000, null = True)
     hiddenTestCases = models.FileField(upload_to="testCases")
     correctSolution = models.FileField(upload_to="solutions")
     correctOutput = models.FileField(upload_to="correctOutputs", null = True)

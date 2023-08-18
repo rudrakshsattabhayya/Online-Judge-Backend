@@ -128,7 +128,6 @@ class LoginWithPassword(APIView):
     def post(self, request):
         email = request.data["email"]
         password = request.data["password"]
-        
         user = UserModel.objects.filter(email=email).first()
 
         if not user:
@@ -207,7 +206,7 @@ class CreateProblemView(APIView):
 
         newProblem = ProblemModel(title=data["title"], problemStatement=problemStatement, visibleTestCases=data["visibleTestCases"],
                                   hiddenTestCases=hiddenTestCases, correctSolution=correctSolution,
-                                  difficulty=data["difficulty"])
+                                  difficulty=data["difficulty"], visibleOutputs=data["visibleOutputs"])
         newProblem.save()
 
 
@@ -315,6 +314,8 @@ class ShowProblemView(APIView):
 
         if response['status'] != status.HTTP_200_OK:
             return Response(response)
+        
+        user = response['user']
 
         questionId = request.data["questionId"]
         problem = None
@@ -326,8 +327,11 @@ class ShowProblemView(APIView):
         if(not problem):
             return Response({"message": "Problem ID is invalid!", "status": status.HTTP_404_NOT_FOUND})
 
+        userSubmissions = SubmissionModel.objects.filter(user=user, problem=problem)
+        ser_submissions = SubmissionsOfAProblemSerializer(userSubmissions, many=True)
+
         ser_data = ShowProblemViewSerializer(problem)
-        return Response({"response": ser_data.data, "status": status.HTTP_200_OK})
+        return Response({"response": {"problemsData":ser_data.data, "userSubmissions": ser_submissions.data} , "status": status.HTTP_200_OK})
 
 class ShowProblemSolutionView(APIView):
     def post(self, request):
@@ -353,7 +357,8 @@ class ShowProblemSolutionView(APIView):
             problemIdModelObj = ProblemIdModel(problemId=problem.id, user=user)
             problemIdModelObj.save()
 
-        return Response({"solution": problem.correctSolution, "status": status.HTTP_200_OK})
+        # correct_solution_url = problem.correctSolution.url if problem.correctSolution else None
+        return Response({"solution": problem.correctSolution.url, "status": status.HTTP_200_OK})
 
 class SubmitProblemView(APIView):
     def post(self, request):
@@ -401,8 +406,9 @@ class SubmitProblemView(APIView):
         user.totalSubmissions += 1
 
         if verdict:
-            solutionViewed = ProblemIdModel.objects.filter(problemId=problem.id, user=user).first()
-            if not solutionViewed:
+            solutionViewed = ProblemIdModel.objects.filter(problemId=problem.id, user=user).all()
+            submissions = SubmissionModel.objects.filter(user__email = user.email, problem=problem).all()
+            if len(solutionViewed) == 0 and len(submissions) == 1:
                 proofOfSolved = ProblemIdModel(problemId=problem.id, user=user)
                 proofOfSolved.save()
                 user.leaderBoardScore = user.leaderBoardScore + problem.difficulty
@@ -410,7 +416,7 @@ class SubmitProblemView(APIView):
             submissionObj.verdict = True
             problem.acceptedSubmissions += 1
             user.acceptedSubmissions += 1
-        
+
         user.save()
         problem.save()
         submissionObj.save()
