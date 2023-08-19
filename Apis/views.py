@@ -448,3 +448,7 @@ class DeleteSubmissionsView(APIView):
             submission.delete()
         
         return Response({"message":"Selected submissions are deleted!", "status": status.HTTP_200_OK})
+    
+class DontSleep(APIView):
+    def get(self, request):
+        return Response("Thank you for helping me not to sleep!")
