@@ -449,6 +449,14 @@ class DeleteSubmissionsView(APIView):
         
         return Response({"message":"Selected submissions are deleted!", "status": status.HTTP_200_OK})
     
+
+def InitializeAppsData():
+    return Response({"message": "Initialized the app data!", "status": status.HTTP_200_OK})
+
 class DontSleep(APIView):
     def get(self, request):
-        return Response("Thank you for helping me not to sleep!")
+        users = UserModel.objects.all()
+        if len(users) != 0:
+            return Response("Thank you for helping me not to sleep!")
+        else:
+            return InitializeAppsData()
