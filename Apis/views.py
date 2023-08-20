@@ -451,12 +451,30 @@ class DeleteSubmissionsView(APIView):
     
 
 def InitializeAppsData():
+    #Create Fake Users for leaderboard
+    user = UserModel(email="rudrakshsattabhayya@gmail.com", username="Rudraksh", isAdmin=True, leaderBoardScore=25)
+    user.save()
+    user = UserModel(email="dummy1@gmail.com", username="Monica", leaderBoardScore=20)
+    user.save()
+    user = UserModel(email="dummy2@gmail.com", username="Chandler", leaderBoardScore=15)
+    user.save()
+    user = UserModel(email="dummy3@gmail.com", username="Joey", leaderBoardScore=10)
+    user.save()
+    user = UserModel(email="dummy4@gmail.com", username="Ross", leaderBoardScore=5)
+    user.save()
+    user = UserModel(email="dummy5@gmail.com", username="Phoebe", leaderBoardScore=5)
+    user.save()
+    user = UserModel(email="dummy6@gmail.com", username="Rachel", leaderBoardScore=1)
+    user.save()
+
+    #Create Problem Statements
+
     return Response({"message": "Initialized the app data!", "status": status.HTTP_200_OK})
 
 class DontSleep(APIView):
     def get(self, request):
         users = UserModel.objects.all()
-        if len(users) != 0:
+        if len(users) >= 7:
             return Response("Thank you for helping me not to sleep!")
         else:
             return InitializeAppsData()
