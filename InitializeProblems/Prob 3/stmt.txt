@@ -1,0 +1,29 @@
+Ntarsis has received two integers 𝑛 and 𝑘 for his birthday. He wonders how many fibonacci-like sequences of length 𝑘 can be formed with 𝑛 as the 𝑘 -th element of the sequence. 
+
+A sequence of non-decreasing non-negative integers is considered fibonacci-like if 𝑓𝑖=𝑓𝑖−1+𝑓𝑖−2 for all 𝑖>2 , where 𝑓𝑖 denotes the 𝑖 -th element in the sequence. Note that 𝑓1 and 𝑓2 can be arbitrary.
+
+For example, sequences such as [4,5,9,14] and [0,1,1] are considered fibonacci-like sequences, while [0,0,0,1,1], [1,2,1,3], and [−1,−1,−2] are not: the first two do not always satisfy 𝑓𝑖=𝑓𝑖−1+𝑓𝑖−2, the latter does not satisfy that the elements are non-negative. 
+
+Impress Ntarsis by helping him with this task.
+
+<b>Input</b>
+<ul>
+<li>The first line contains an integer 𝑡 (1≤𝑡≤2⋅10^5), the number of test cases. The description of each test case is as follows.</li>
+<li>Each test case contains two integers, 𝑛 and 𝑘 (1≤𝑛≤2⋅10^5, 3≤𝑘≤10^9).</li>
+<li>It is guaranteed the sum of 𝑛 over all test cases does not exceed 2⋅10^5.</li>
+</ul>
+
+<b>Output</b>
+For each test case output an integer, the number of fibonacci-like sequences of length 𝑘 such that the 𝑘 -th element in the sequence is 𝑛 . That is, output the number of sequences 𝑓 of length 𝑘 so 𝑓 is a fibonacci-like sequence and 𝑓𝑘=𝑛 . It can be shown this number is finite.
+
+<b>Note</b>
+There are 4 valid fibonacci-like sequences for 𝑛=22, 𝑘=4:
+
+- [6,8,14,22],
+- [4,9,13,22],
+- [2,10,12,22],
+- [0,11,11,22].
+
+For 𝑛=3, 𝑘=9, it can be shown that there are no fibonacci-like sequences satisfying the given conditions.
+
+For 𝑛=55, 𝑘=11, [0,1,1,2,3,5,8,13,21,34,55] is the only fibonacci-like sequence.

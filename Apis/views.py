@@ -203,10 +203,12 @@ class CreateProblemView(APIView):
         problemStatement = files["problemStatement"]
         hiddenTestCases = files["hiddenTestCases"]
         correctSolution = files["correctSolution"]
+        visibleOutputs = files["visibleOutputs"]
+        visibleTestCases = files["visibleTestCases"]
 
-        newProblem = ProblemModel(title=data["title"], problemStatement=problemStatement, visibleTestCases=data["visibleTestCases"],
+        newProblem = ProblemModel(title=data["title"], problemStatement=problemStatement, visibleTestCases=visibleTestCases,
                                   hiddenTestCases=hiddenTestCases, correctSolution=correctSolution,
-                                  difficulty=data["difficulty"], visibleOutputs=data["visibleOutputs"])
+                                  difficulty=data["difficulty"], visibleOutputs=visibleOutputs)
         newProblem.save()
 
 
@@ -232,13 +234,7 @@ class CreateProblemView(APIView):
         }
 
         respFromEval = requests.post(f"{os.getenv('DJANGO_EVALUATION_SERVER_URL')}/get-outputs", files=files, data=obj)
-        temp = None
-        for x in respFromEval:
-            temp = x
-
-        temp2 = temp.decode('utf-8')
-        response_dict = json.loads(temp2)
-
+        response_dict = respFromEval.json()
         outputString = response_dict["outputs"]
 
         with open(outputs_path, 'w') as file:
@@ -448,7 +444,61 @@ class DeleteSubmissionsView(APIView):
             submission.delete()
         
         return Response({"message":"Selected submissions are deleted!", "status": status.HTTP_200_OK})
+
+def addTags(tags, newProblem):
+    tagslist = tags.split(", ")
+    tagsQueryset = TagModel.objects.all()
+
+    for tag in tagslist:
+        found = tagsQueryset.filter(name=tag).first()
+        y = found
+        if(not found):
+            y = TagModel(name=tag)
+            y.save()
+        else:
+            y = found
+        
+        newProblem.tags.add(y)
     
+    newProblem.save()
+
+def addFilesToProblem(prob, fileName):
+    stmt_path = os.path.join(BASE_DIR, 'InitializeProblems', fileName, 'stmt.txt')
+    with open(stmt_path, 'rb') as stmt_file:
+        prob.problemStatement.save('stmt.txt', File(stmt_file))
+
+
+    visibleTestCasesPath = os.path.join(BASE_DIR, 'InitializeProblems', fileName, 'visibleInputs.txt')
+    with open(visibleTestCasesPath, 'rb') as visibleTestCasesPathFile:
+        prob.visibleTestCases.save('visibleInputs.txt', File(visibleTestCasesPathFile))
+
+
+    visibleOutputsFilePath = os.path.join(BASE_DIR, 'InitializeProblems', fileName, 'visibleOutputs.txt')
+    with open(visibleOutputsFilePath, 'rb') as visibleOutputsFile:
+        prob.visibleOutputs.save('visibleInputs.txt', File(visibleOutputsFile))
+
+
+    hiddenTestCasesPath = os.path.join(BASE_DIR, 'InitializeProblems', fileName, 'inputs.txt')
+    with open(hiddenTestCasesPath, 'rb') as hiddenTestCasesFile:
+        prob.hiddenTestCases.save('hiddenTestCases.txt', File(hiddenTestCasesFile))
+
+
+    correctSolutionPath = os.path.join(BASE_DIR, 'InitializeProblems', fileName, 'solution.cpp')
+    with open(correctSolutionPath, 'rb') as correctSolutionPathFile:
+        prob.correctSolution.save('correctSolution.txt', File(correctSolutionPathFile))
+
+    correctOutputPath = os.path.join(BASE_DIR, 'InitializeProblems', fileName, 'correctOutputs.txt')
+    with open(correctOutputPath, 'rb') as correctOutputPathFile:
+        prob.correctOutput.save('correctOutput.txt', File(correctOutputPathFile))
+    
+    prob.save()
+
+def initializeProblem(title, difficulty, tags, fileName):
+    prob = ProblemModel(title=title, difficulty=difficulty)
+    prob.save()
+    
+    addTags(tags, prob)
+    addFilesToProblem(prob, fileName)
 
 def InitializeAppsData():
     #Create Fake Users for leaderboard
@@ -468,7 +518,26 @@ def InitializeAppsData():
     user.save()
 
     #Create Problem Statements
+    initializeDirectory = os.path.join(BASE_DIR, 'InitializeProblems')
+    if os.path.exists(initializeDirectory):
+        subfolders = [folder for folder in os.listdir(initializeDirectory) if os.path.isdir(os.path.join(initializeDirectory, folder))]
 
+        for folder_name in subfolders:
+            file_path = os.path.join(BASE_DIR, 'InitializeProblems', folder_name, 'otherinfo.txt')
+
+            with open(file_path, 'r') as file:
+                lines = file.readlines()
+
+            info = {}
+            for line in lines:
+                key, value = line.strip().split('=')
+                info[key] = value
+            
+            title = info.get('name', '')
+            tags = info.get('tags', '')
+            difficulty = int(info.get('difficulty', 0))
+            initializeProblem(title=title, difficulty=difficulty, tags=tags, fileName=folder_name)
+    
     return Response({"message": "Initialized the app data!", "status": status.HTTP_200_OK})
 
 class DontSleep(APIView):

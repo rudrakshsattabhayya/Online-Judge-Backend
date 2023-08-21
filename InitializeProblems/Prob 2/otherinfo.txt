@@ -1,0 +1,3 @@
+name=Best Binary String
+tags=constructive algorithm, greedy, string
+difficulty=2

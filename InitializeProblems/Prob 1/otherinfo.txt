@@ -1,0 +1,3 @@
+name=Contains Duplicate
+tags=array
+difficulty=1

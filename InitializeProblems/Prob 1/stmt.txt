@@ -1,0 +1,14 @@
+Given an integer array nums, return true if any value appears at least twice in the array, and return false if every element is distinct.
+
+
+<b>Input format:</b>
+<ul>
+<li>First line contains the input t for the number of test cases</li>
+<li>Second line contains the input n for the size of an array</li>
+<li>Third line contains the n spaced integers which are the elements of an array</li>
+<li>And this continues for t-1 times more</li>
+</ul>
+
+<b>Constraints:</b>
+1 <= nums.length <= 105
+-109 <= nums[i] <= 109

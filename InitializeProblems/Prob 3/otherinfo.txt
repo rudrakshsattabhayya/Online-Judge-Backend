@@ -1,0 +1,3 @@
+name=Fibonaccharisis
+tags=binary search, brute force, math
+difficulty=2

@@ -1,0 +1,3 @@
+name=Gaming with reversing
+tags=games, greedy, math, strings
+difficulty=2
