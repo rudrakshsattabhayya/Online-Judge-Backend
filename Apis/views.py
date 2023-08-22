@@ -541,7 +541,7 @@ def InitializeAppsData():
 class DontSleep(APIView):
     def get(self, request):
         users = UserModel.objects.all()
-        if len(users) >= 7:
+        if len(users) >= 6:
             return Response("Thank you for helping me not to sleep!")
         else:
             return InitializeAppsData()
