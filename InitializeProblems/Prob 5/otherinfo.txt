@@ -1,0 +1,5 @@
+name=PermuTree 
+tags=dfs, dp, trees
+difficulty=3
+acceptedSubmissions=1
+totalSubmissions=5
