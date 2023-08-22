@@ -62,10 +62,10 @@ class AuthenticateRoute(APIView):
             return Response({"message": "Token not found! Try to Re-Login.", "status": status.HTTP_404_NOT_FOUND})
         
         res = authenticate(recievedToken)
-        user = res['user']
         if res["status"] == status.HTTP_404_NOT_FOUND:
             return Response(res)
         
+        user = res['user']
         obj = {
             "status": res["status"],
             "name": user.name,
