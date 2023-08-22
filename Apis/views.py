@@ -493,8 +493,8 @@ def addFilesToProblem(prob, fileName):
     
     prob.save()
 
-def initializeProblem(title, difficulty, tags, fileName):
-    prob = ProblemModel(title=title, difficulty=difficulty)
+def initializeProblem(title, difficulty, tags, fileName, acceptedSubmissions, totalSubmissions):
+    prob = ProblemModel(title=title, difficulty=difficulty, acceptedSubmissions=acceptedSubmissions, totalSubmissions=totalSubmissions)
     prob.save()
     
     addTags(tags, prob)
@@ -536,7 +536,7 @@ def InitializeAppsData():
             difficulty = int(info.get('difficulty', 0))
             acceptedSubmissions = int(info.get('acceptedSubmissions', 0))
             totalSubmissions = int(info.get('totalSubmissions', 0))
-            initializeProblem(title=title, difficulty=difficulty, tags=tags, fileName=folder_name)
+            initializeProblem(title=title, difficulty=difficulty, tags=tags, fileName=folder_name, acceptedSubmissions=acceptedSubmissions, totalSubmissions=totalSubmissions)
     
     return Response({"message": "Initialized the app data!", "status": status.HTTP_200_OK})
 
