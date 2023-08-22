@@ -111,7 +111,7 @@ class LoginView(APIView):
         user = found
 
         if not found:
-            user = UserModel(email=googleObj['email'], name=googleObj['name'], profilePic=googleObj['picture'], token=userToken)
+            user = UserModel(email=googleObj['email'], name=googleObj['name'], profilePic=googleObj['picture'], username=googleObj['name'], token=userToken)
         else:
             user.token = userToken
         
