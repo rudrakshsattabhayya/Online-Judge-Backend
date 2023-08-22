@@ -502,8 +502,6 @@ def initializeProblem(title, difficulty, tags, fileName):
 
 def InitializeAppsData():
     #Create Fake Users for leaderboard
-    user = UserModel(email="rudrakshsattabhayya@gmail.com", username="Rudraksh", isAdmin=True, leaderBoardScore=25)
-    user.save()
     user = UserModel(email="dummy1@gmail.com", username="Monica", leaderBoardScore=20)
     user.save()
     user = UserModel(email="dummy2@gmail.com", username="Chandler", leaderBoardScore=15)
