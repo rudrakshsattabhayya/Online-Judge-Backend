@@ -1,3 +1,5 @@
 name=Fibonaccharisis
 tags=binary search, brute force, math
 difficulty=2
+acceptedSubmissions=8
+totalSubmissions=12

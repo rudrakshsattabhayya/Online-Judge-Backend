@@ -1,3 +1,5 @@
 name=Contains Duplicate
 tags=array
 difficulty=1
+acceptedSubmissions=10
+totalSubmissions=12

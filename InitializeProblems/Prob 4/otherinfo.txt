@@ -1,3 +1,5 @@
 name=Gaming with reversing
 tags=games, greedy, math, strings
 difficulty=2
+acceptedSubmissions=2
+totalSubmissions=7

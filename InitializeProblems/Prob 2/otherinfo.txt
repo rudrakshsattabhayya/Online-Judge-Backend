@@ -1,3 +1,5 @@
 name=Best Binary String
 tags=constructive algorithm, greedy, string
 difficulty=2
+acceptedSubmissions=8
+totalSubmissions=12

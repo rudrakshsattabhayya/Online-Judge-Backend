@@ -534,6 +534,8 @@ def InitializeAppsData():
             title = info.get('name', '')
             tags = info.get('tags', '')
             difficulty = int(info.get('difficulty', 0))
+            acceptedSubmissions = int(info.get('acceptedSubmissions', 0))
+            totalSubmissions = int(info.get('totalSubmissions', 0))
             initializeProblem(title=title, difficulty=difficulty, tags=tags, fileName=folder_name)
     
     return Response({"message": "Initialized the app data!", "status": status.HTTP_200_OK})
